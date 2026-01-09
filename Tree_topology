@@ -1,0 +1,76 @@
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+
+using namespace ns3;
+
+int main ()
+{
+    // 1. Create 20 nodes
+    NodeContainer nodes;
+    nodes.Create (20);
+
+    // 2. Point-to-Point helper (for edges)
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+    p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+    // 3. TREE connections (parent → children)
+    // Root (0)
+    p2p.Install (nodes.Get(0), nodes.Get(1));
+    p2p.Install (nodes.Get(0), nodes.Get(2));
+
+    // Level 1
+    p2p.Install (nodes.Get(1), nodes.Get(3));
+    p2p.Install (nodes.Get(1), nodes.Get(4));
+    p2p.Install (nodes.Get(2), nodes.Get(5));
+    p2p.Install (nodes.Get(2), nodes.Get(6));
+
+    // Level 2
+    int parent = 3;
+    for (uint32_t i = 7; i < 20; i++)
+    {
+        p2p.Install (nodes.Get(parent), nodes.Get(i));
+        parent++;
+        if (parent > 6) parent = 3;
+    }
+
+    // 4. Internet stack
+    InternetStackHelper internet;
+    internet.Install (nodes);
+
+    // 5. Mobility (TREE shape layout)
+    MobilityHelper mobility;
+    Ptr<ListPositionAllocator> pos = CreateObject<ListPositionAllocator>();
+
+    pos->Add (Vector (50, 90, 0));   // root
+
+    pos->Add (Vector (20, 70, 0));
+    pos->Add (Vector (80, 70, 0));
+
+    pos->Add (Vector (10, 50, 0));
+    pos->Add (Vector (30, 50, 0));
+    pos->Add (Vector (70, 50, 0));
+    pos->Add (Vector (90, 50, 0));
+
+    for (int i = 7; i < 20; i++)
+    {
+        pos->Add (Vector (10 + (i-7)*10, 30, 0));
+    }
+
+    mobility.SetPositionAllocator (pos);
+    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    mobility.Install (nodes);
+
+    // 6. NetAnim XML
+    AnimationInterface anim ("tree20.xml");
+
+    Simulator::Stop (Seconds (10));
+    Simulator::Run ();
+    Simulator::Destroy ();
+
+    return 0;
+}
