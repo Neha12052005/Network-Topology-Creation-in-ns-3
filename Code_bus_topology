@@ -1,0 +1,48 @@
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/csma-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+
+using namespace ns3;
+
+int main ()
+{
+    // 1. Create 17 nodes
+    NodeContainer nodes;
+    nodes.Create (17);
+
+    // 2. CSMA helper (BUS)
+    CsmaHelper csma;
+    csma.SetChannelAttribute ("DataRate", StringValue ("100Mbps"));
+    csma.SetChannelAttribute ("Delay", TimeValue (NanoSeconds (6560)));
+
+    NetDeviceContainer devices = csma.Install (nodes);
+
+    // 3. Internet stack
+    InternetStackHelper internet;
+    internet.Install (nodes);
+
+    // 4. Mobility (STRAIGHT LINE layout for bus)
+    MobilityHelper mobility;
+    Ptr<ListPositionAllocator> pos = CreateObject<ListPositionAllocator>();
+
+    for (uint32_t i = 0; i < 17; i++)
+    {
+        pos->Add (Vector (i * 20.0, 50.0, 0.0));
+    }
+
+    mobility.SetPositionAllocator (pos);
+    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    mobility.Install (nodes);
+
+    // 5. NetAnim XML
+    AnimationInterface anim ("bus17.xml");
+
+    Simulator::Stop (Seconds (10));
+    Simulator::Run ();
+    Simulator::Destroy ();
+
+    return 0;
+}
