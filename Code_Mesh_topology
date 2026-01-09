@@ -1,0 +1,61 @@
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+
+using namespace ns3;
+
+int main ()
+{
+    // 1. Create 20 nodes
+    NodeContainer nodes;
+    nodes.Create (20);
+
+    // 2. Point-to-Point helper
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+    p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+    // 3. MESH connections (each node connects to next 3 nodes)
+    for (uint32_t i = 0; i < 20; i++)
+    {
+        for (uint32_t j = i + 1; j <= i + 3 && j < 20; j++)
+        {
+            p2p.Install (nodes.Get(i), nodes.Get(j));
+        }
+    }
+
+    // 4. Internet stack
+    InternetStackHelper internet;
+    internet.Install (nodes);
+
+    // 5. Mobility (GRID layout so mesh visible)
+    MobilityHelper mobility;
+    Ptr<ListPositionAllocator> pos = CreateObject<ListPositionAllocator>();
+
+    int gridSize = 5;   // 5x4 grid = 20 nodes
+    double spacing = 30.0;
+
+    for (int y = 0; y < 4; y++)
+    {
+        for (int x = 0; x < 5; x++)
+        {
+            pos->Add (Vector (x * spacing, y * spacing, 0));
+        }
+    }
+
+    mobility.SetPositionAllocator (pos);
+    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    mobility.Install (nodes);
+
+    // 6. NetAnim
+    AnimationInterface anim ("mesh20.xml");
+
+    Simulator::Stop (Seconds (10));
+    Simulator::Run ();
+    Simulator::Destroy ();
+
+    return 0;
+}
